@@ -102,6 +102,15 @@ KWB_REPLACE += DEBUG
 KWB_CFG_DEBUG = 1
 endif
 
+ifdef CONFIG_TARGET_DB_88F6720
+# Armada 375 lacks open-source DDR3/SerDes HW training code. Chain a
+# vendor-supplied bin_hdr blob (executed and returned to by the BootROM)
+# ahead of the U-Boot SPL binary header entry above.
+# NOTE: '/' in the path must be escaped since it is substituted via sed.
+KWB_REPLACE += BINARY
+KWB_CFG_BINARY = board\/Marvell\/db-88f6720\/binary.0 LOAD_ADDRESS 0x40000030
+endif
+
 quiet_cmd_kwbcfg = KWBCFG  $@
 cmd_kwbcfg = sed -ne '$(foreach V,$(KWB_REPLACE),s/\#@$(V)/$(V) $(KWB_CFG_$(V))/;)p' \
 	<$< >$(dir $@)$(@F)
@@ -116,6 +125,7 @@ obj-y	+= mbus.o
 obj-$(CONFIG_XPL_BUILD) += spl.o
 obj-$(CONFIG_XPL_BUILD) += lowlevel_spl.o
 
+obj-$(CONFIG_ARMADA_375) += serdes/a375/
 obj-$(CONFIG_ARMADA_38X) += serdes/a38x/
 obj-$(CONFIG_ARMADA_XP) += serdes/axp/
 

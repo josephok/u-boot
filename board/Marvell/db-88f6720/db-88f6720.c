@@ -39,6 +39,67 @@ DECLARE_GLOBAL_DATA_PTR;
 #define DB_88F6720_GPP_POL_MID		0x0
 #define DB_88F6720_GPP_POL_HIGH		0x0
 
+/*
+ * Armada 375 "Ethernet Complex" crossbar registers. These route the two
+ * GbE MACs to the internal quad-GbE-PHY / switch / RGMII / ComPhy blocks
+ * and are *not* configured by the vendor's closed-source bin_hdr blob -
+ * the vendor U-Boot (mvEthComplexInit(), board/mv_ebu/a375/.../
+ * mvCtrlEthCompLib.c) sets them up in its normal board init. Without this,
+ * the internal GbE PHY stays held in reset and its MDIO/SMI bus is left
+ * sourced from the switch instead of the MAC, so the mvpp2 driver's MDIO
+ * reads simply time out ("Could not get PHY for mdio: addr 0").
+ *
+ * This board's ethSataComplexOpt is MV_ETHCOMP_GE_MAC0_2_GE_PHY_P0 (only
+ * MAC0 -> internal GbE PHY0 is wired up; MAC1 is left unconnected, matching
+ * the vendor board config), so only that path is replicated here.
+ */
+#define MVEBU_ETHCOMP_BASE		MVEBU_REGISTER(0x18900)
+#define ETHCOMP_GOP_CTRL_STAT_REG	(MVEBU_ETHCOMP_BASE + 0x00)
+#define ETHCOMP_CTRL_REG		(MVEBU_ETHCOMP_BASE + 0x10)
+#define ETHCOMP_CLOCK_CTRL_REG		(MVEBU_ETHCOMP_BASE + 0x1c)
+#define ETHCOMP_GBE_PHY_CTRL1_REG(phy)	(MVEBU_ETHCOMP_BASE + 0xb0 + (phy) * 4)
+#define ETHCOMP_QUAD_GBE_PHY_CTRL_STAT_REG (MVEBU_ETHCOMP_BASE + 0xd0)
+
+static void mvebu_a375_eth_complex_init(void)
+{
+	u32 reg;
+
+	/* GbE PHY clock control: sample on negative edge (A0 revision) */
+	reg = readl(ETHCOMP_CLOCK_CTRL_REG);
+	reg &= ~(BIT(23) | BIT(28));
+	writel(reg, ETHCOMP_CLOCK_CTRL_REG);
+
+	/* Route GbE MAC0 -> internal quad-GbE-PHY port 0 */
+	reg = readl(ETHCOMP_CTRL_REG);
+	reg &= ~BIT(14);	/* GbE PHY0 port source = MAC (not switch) */
+	reg &= ~(0x3 << 10);
+	reg |= (0x2 << 10);	/* GbE MAC0 source = internal GbE PHY complex */
+	reg &= ~BIT(20);	/* PHY0 SMI source = MAC (not switch) */
+	reg &= ~BIT(7);		/* Switch port 6 source = not connected */
+	reg &= ~BIT(4);		/* Switch port 0 source = not connected */
+	reg &= ~BIT(15);	/* PHY1 SMI source = MAC (unused port) */
+	reg &= ~BIT(16);	/* PHY2 SMI source = MAC (unused port) */
+	writel(reg, ETHCOMP_CTRL_REG);
+
+	/* Enable GOP device and set port0 data-path clock source */
+	reg = readl(ETHCOMP_GOP_CTRL_STAT_REG);
+	reg |= BIT(19);
+	reg |= BIT(13);
+	writel(reg, ETHCOMP_GOP_CTRL_STAT_REG);
+
+	/* Internal GbE PHY0: no power-down, auto MDI/MDI-X crossover */
+	reg = readl(ETHCOMP_GBE_PHY_CTRL1_REG(0));
+	reg &= ~(0x7 << 14);
+	reg &= ~(0x3 << 12);
+	reg |= (0x3 << 12);
+	writel(reg, ETHCOMP_GBE_PHY_CTRL1_REG(0));
+
+	/* Release the internal quad-GbE-PHY block from reset */
+	reg = readl(ETHCOMP_QUAD_GBE_PHY_CTRL_STAT_REG);
+	reg |= BIT(0) | BIT(4);
+	writel(reg, ETHCOMP_QUAD_GBE_PHY_CTRL_STAT_REG);
+}
+
 int board_early_init_f(void)
 {
 	/* Configure MPP */
@@ -75,6 +136,8 @@ int board_init(void)
 {
 	/* adress of boot parameters */
 	gd->bd->bi_boot_params = mvebu_sdram_bar(0) + 0x100;
+
+	mvebu_a375_eth_complex_init();
 
 	return 0;
 }

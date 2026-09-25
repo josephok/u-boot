@@ -144,3 +144,12 @@ __pycache__
 
 # Clang's compilation database file
 /compile_commands.json
+
+# DB-88F6720: locally-generated binary.0 (see db-88f6720-build.sh), never
+# committed - it only needs to exist on disk at build time.
+board/Marvell/db-88f6720/binary.0
+
+# DB-88F6720: vendor-supplied bin_hdr.elf is intentionally tracked (exception
+# to the generic "*.elf" rule above), per explicit user decision to commit
+# this proprietary Marvell blob into this repository.
+!board/Marvell/db-88f6720/vendor-blobs/bin_hdr.elf

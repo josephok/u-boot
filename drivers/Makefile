@@ -60,6 +60,7 @@ obj-$(CONFIG_SPL_CPU) += cpu/
 obj-$(CONFIG_SPL_CRYPTO) += crypto/
 obj-$(CONFIG_SPL_MPC8XXX_INIT_DDR) += ddr/fsl/
 obj-$(CONFIG_ARMADA_38X) += ddr/marvell/a38x/
+obj-$(CONFIG_ARMADA_375) += ddr/marvell/a375/
 obj-$(CONFIG_ARMADA_XP) += ddr/marvell/axp/
 obj-$(CONFIG_$(PHASE_)ALTERA_SDRAM) += ddr/altera/
 obj-$(CONFIG_ARCH_IMX8M) += ddr/imx/imx8m/

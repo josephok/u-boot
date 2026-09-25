@@ -22,5 +22,12 @@ VERSION		1
 # Enable BootROM output via DEBUG flag on SoCs which require it
 #@DEBUG
 
+# Armada 375 has no open-source DDR3/SerDes HW training code, so a
+# vendor-supplied "bin_hdr" blob (executed by the BootROM before the
+# main image below) is used to perform it. board/Marvell/db-88f6720/
+# binary.0 is generated from board/Marvell/db-88f6720/vendor-blobs/
+# bin_hdr.elf by db-88f6720-build.sh (see that script for details).
+#@BINARY
+
 # Include U-Boot SPL with DDR3 training code into Binary Header
 BINARY spl/u-boot-spl.bin #@LOAD_ADDRESS

@@ -313,7 +313,6 @@ int board_return_to_bootrom(struct spl_image_info *spl_image,
 	hang();
 }
 
-#if !defined(CONFIG_ARMADA_375)
 __weak bool board_use_old_ddr3_training(void)
 {
 	return false;
@@ -338,7 +337,6 @@ static void ddr3_init_or_fail(void)
 			hang();
 	}
 }
-#endif
 
 void board_init_f(ulong dummy)
 {
@@ -368,14 +366,22 @@ void board_init_f(ulong dummy)
 
 	preloader_console_init();
 
-	/* Armada 375 does not support SerDes and DDR3 init yet */
-#if !defined(CONFIG_ARMADA_375)
-	/* First init the serdes PHY's */
-	serdes_phy_config();
+	/*
+	 * On Armada 375 SerDes PHY power-up and DDR3 training are already
+	 * performed by the vendor "bin_hdr" binary header blob, which the
+	 * BootROM executes before this SPL binary header (see
+	 * arch/arm/mach-mvebu/kwbimage.cfg.in / board/Marvell/db-88f6720/
+	 * binary.0). Re-running our own SerDes/DDR3 init here would
+	 * reconfigure already-trained, in-use DRAM and SerDes lanes, so
+	 * skip both and go straight to the rest of the SPL flow.
+	 */
+	if (!IS_ENABLED(CONFIG_ARMADA_375)) {
+		/* First init the serdes PHY's */
+		serdes_phy_config();
 
-	/* Setup DDR */
-	ddr3_init_or_fail();
-#endif
+		/* Setup DDR */
+		ddr3_init_or_fail();
+	}
 
 	/* Initialize Auto Voltage Scaling */
 	mv_avs_init();
