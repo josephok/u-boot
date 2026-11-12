@@ -89,6 +89,7 @@ err_cert:
 	return ret;
 }
 
+#ifndef OPENSSL_NO_ENGINE
 /**
  * rsa_engine_get_pub_key() - read a public key from given engine
  *
@@ -157,6 +158,13 @@ static int rsa_engine_get_pub_key(const char *keydir, const char *name,
 
 	return 0;
 }
+#else
+static int rsa_engine_get_pub_key(const char *keydir, const char *name,
+				  ENGINE *engine, EVP_PKEY **evpp)
+{
+	return rsa_err("OpenSSL engines are not supported");
+}
+#endif
 
 /**
  * rsa_get_pub_key() - read a public key
@@ -217,6 +225,7 @@ static int rsa_pem_get_priv_key(const char *keydir, const char *name,
 	return 0;
 }
 
+#ifndef OPENSSL_NO_ENGINE
 /**
  * rsa_engine_get_priv_key() - read a private key from given engine
  *
@@ -293,6 +302,14 @@ static int rsa_engine_get_priv_key(const char *keydir, const char *name,
 
 	return 0;
 }
+#else
+static int rsa_engine_get_priv_key(const char *keydir, const char *name,
+				   const char *keyfile,
+				   ENGINE *engine, EVP_PKEY **evpp)
+{
+	return rsa_err("OpenSSL engines are not supported");
+}
+#endif
 
 /**
  * rsa_get_priv_key() - read a private key
@@ -325,6 +342,7 @@ static int rsa_init(void)
 	return 0;
 }
 
+#ifndef OPENSSL_NO_ENGINE
 static int rsa_engine_init(const char *engine_id, ENGINE **pe)
 {
 	const char *key_pass;
@@ -380,6 +398,17 @@ static void rsa_engine_remove(ENGINE *e)
 		ENGINE_free(e);
 	}
 }
+#else
+static int rsa_engine_init(const char *engine_id, ENGINE **pe)
+{
+	fprintf(stderr, "OpenSSL engines are not supported\n");
+	return -1;
+}
+
+static void rsa_engine_remove(ENGINE *e)
+{
+}
+#endif
 
 static int rsa_sign_with_key(EVP_PKEY *pkey, struct padding_algo *padding_algo,
 			     struct checksum_algo *checksum_algo,
